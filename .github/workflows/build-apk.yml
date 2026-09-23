@@ -1,0 +1,49 @@
+name: Build My Stock APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'MyStockAndroidProject.zip'
+      - '.github/workflows/build-apk.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Extract Android project
+        run: |
+          rm -rf build-src
+          mkdir -p build-src
+          unzip -q MyStockAndroidProject.zip -d build-src
+          if [ -f build-src/MyStockAndroid/build.gradle ]; then
+            mv build-src/MyStockAndroid/* build-src/
+            mv build-src/MyStockAndroid/.[!.]* build-src/ 2>/dev/null || true
+            rmdir build-src/MyStockAndroid
+          fi
+
+      - name: Build debug APK
+        working-directory: build-src
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: My-Stock-debug-APK
+          path: build-src/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: errorerror
